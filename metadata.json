@@ -1,0 +1,6 @@
+{
+  "name": "نظام إدارة العمارة السكنية",
+  "description": "نظام متكامل لإدارة العمارة السكنية، الشقق، السكان، الخدمات والتشغيل، المحاسبة والصندوق المالي، والمشاريع والمجتمع.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

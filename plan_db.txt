@@ -1,0 +1,11 @@
+MISSING TABLES TO ADD:
+- credits (apartment_id, resident_id, original_amount, remaining_amount, date, source, notes)
+- general_pumping (date, time, supervisor, initial_reading, final_reading, consumption, electricity_price, total_cost, notes, attachment_url)
+- rent_contracts (apartment_id, tenant_id, start_date, end_date, monthly_rent, due_day, security_deposit, status, notes)
+- cash_fund (type: INCOME/EXPENSE, amount, date, source, reference_id, project_id, payment_method, notes, user_id)
+- projects (name, description, start_date, budget, status, manager_id, notes)
+- announcements (title, content, date, audience, status)
+- visits_gifts (type, beneficiary, amount, date, description, attachment_url)
+- notifications (user_id, apartment_id, type, title, message, is_read, date)
+
+Let's update the schema.ts safely.
