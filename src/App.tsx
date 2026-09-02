@@ -366,6 +366,262 @@ const Login = () => {
   );
 };
 
+const ResetPassword = () => {
+  const navigate = useNavigate();
+  const [checkingLink, setCheckingLink] = useState(true);
+  const [isRecoverySession, setIsRecoverySession] = useState(false);
+  const [linkError, setLinkError] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const searchParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const recoveryCode = searchParams.get('code');
+    const hasRecoveryMarker =
+      searchParams.get('type') === 'recovery' ||
+      hashParams.get('type') === 'recovery' ||
+      Boolean(recoveryCode) ||
+      Boolean(hashParams.get('access_token'));
+
+    const markReady = () => {
+      if (!active) return;
+      setIsRecoverySession(true);
+      setLinkError('');
+      setCheckingLink(false);
+    };
+
+    const markInvalid = () => {
+      if (!active) return;
+      setIsRecoverySession(false);
+      setLinkError('رابط استعادة كلمة المرور غير صالح أو انتهت صلاحيته. يرجى طلب رابط جديد من شاشة الدخول.');
+      setCheckingLink(false);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active) return;
+      if (event === 'PASSWORD_RECOVERY' && session?.user) {
+        markReady();
+      } else if (event === 'SIGNED_IN' && hasRecoveryMarker && session?.user) {
+        markReady();
+      }
+    });
+
+    const verifyRecoverySession = async () => {
+      try {
+        if (!hasRecoveryMarker) {
+          markInvalid();
+          return;
+        }
+
+        if (recoveryCode) {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(recoveryCode);
+          if (!active) return;
+          if (error || !data.session?.user) {
+            console.error('Invalid password recovery code:', error?.message);
+            markInvalid();
+            return;
+          }
+          window.history.replaceState({}, document.title, '/reset-password');
+          markReady();
+          return;
+        }
+
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (!active) return;
+        if (error || !session?.user) {
+          console.error('Invalid password recovery session:', error?.message);
+          markInvalid();
+          return;
+        }
+        window.history.replaceState({}, document.title, '/reset-password');
+        markReady();
+      } catch (err) {
+        console.error('Unexpected password recovery verification failure:', err);
+        markInvalid();
+      }
+    };
+
+    const verificationTimer = window.setTimeout(verifyRecoverySession, 250);
+
+    return () => {
+      active = false;
+      window.clearTimeout(verificationTimer);
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!isRecoverySession) {
+      toast.error('رابط استعادة كلمة المرور غير صالح أو انتهت صلاحيته.');
+      return;
+    }
+
+    if (password.length < 8) {
+      toast.error('يجب أن تكون كلمة المرور الجديدة 8 أحرف على الأقل.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error('كلمتا المرور غير متطابقتين.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        console.error('Password update failed:', error.message);
+        toast.error('تعذر تحديث كلمة المرور. قد يكون الرابط منتهياً، يرجى طلب رابط جديد.');
+        return;
+      }
+
+      await supabase.auth.signOut().catch(() => {});
+      toast.success('تم تحديث كلمة المرور بنجاح. يمكنك تسجيل الدخول الآن.');
+      navigate('/login', { replace: true });
+    } catch (err) {
+      console.error('Unexpected password update failure:', err);
+      toast.error('حدث خطأ غير متوقع أثناء تحديث كلمة المرور. يرجى المحاولة مرة أخرى.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (checkingLink) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4" dir="rtl">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <Building className="h-10 w-10 text-primary animate-pulse" />
+          <p className="text-sm font-bold text-muted-foreground">جاري التحقق من رابط استعادة كلمة المرور...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isRecoverySession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-muted/50 to-background p-4" dir="rtl">
+        <div className="w-full max-w-md bg-card rounded-3xl shadow-xl border overflow-hidden">
+          <div className="bg-destructive/10 p-6 text-center border-b">
+            <div className="mx-auto w-14 h-14 bg-background text-destructive rounded-2xl flex items-center justify-center shadow-sm mb-3 border">
+              <Lock className="h-7 w-7" />
+            </div>
+            <h1 className="text-xl font-black text-foreground">تعذر فتح رابط الاستعادة</h1>
+            <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+              {linkError || 'رابط استعادة كلمة المرور غير صالح أو انتهت صلاحيته.'}
+            </p>
+          </div>
+          <div className="p-6">
+            <button
+              type="button"
+              onClick={() => navigate('/login', { replace: true })}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl shadow-md text-sm font-black text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all cursor-pointer"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              الرجوع إلى شاشة الدخول
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-muted/50 to-background p-4" dir="rtl">
+      <div className="w-full max-w-md bg-card rounded-3xl shadow-xl border overflow-hidden">
+        <div className="bg-primary/10 p-6 text-center border-b">
+          <div className="mx-auto w-14 h-14 bg-primary text-primary-foreground rounded-2xl flex items-center justify-center shadow-md mb-3">
+            <ShieldCheck className="h-7 w-7" />
+          </div>
+          <h1 className="text-xl font-black text-foreground">تعيين كلمة مرور جديدة</h1>
+          <p className="text-xs text-muted-foreground mt-1">أدخل كلمة مرور قوية لحساب الإدارة</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-xs font-black text-foreground mb-1.5">
+              كلمة المرور الجديدة
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="8 أحرف على الأقل"
+                className="w-full pr-10 pl-10 py-3 bg-background border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm font-medium text-foreground text-left"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                dir="ltr"
+              />
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-muted-foreground">
+                <Lock className="h-4 w-4" />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 left-0 pl-3 flex items-center text-muted-foreground hover:text-foreground focus:outline-none"
+                aria-label={showPassword ? 'إخفاء كلمة المرور الجديدة' : 'إظهار كلمة المرور الجديدة'}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-black text-foreground mb-1.5">
+              تأكيد كلمة المرور الجديدة
+            </label>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="أعد كتابة كلمة المرور"
+                className="w-full pr-10 pl-10 py-3 bg-background border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm font-medium text-foreground text-left"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                dir="ltr"
+              />
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-muted-foreground">
+                <Lock className="h-4 w-4" />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute inset-y-0 left-0 pl-3 flex items-center text-muted-foreground hover:text-foreground focus:outline-none"
+                aria-label={showConfirmPassword ? 'إخفاء تأكيد كلمة المرور الجديدة' : 'إظهار تأكيد كلمة المرور الجديدة'}
+              >
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            بعد حفظ كلمة المرور سيتم إنهاء جلسة الاستعادة المؤقتة وإعادتك إلى شاشة الدخول.
+          </p>
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl shadow-md text-sm font-black text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 transition-all cursor-pointer"
+          >
+            <ShieldCheck className="h-4 w-4" />
+            {submitting ? 'جاري حفظ كلمة المرور...' : 'حفظ كلمة المرور الجديدة'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   if (loading) {
