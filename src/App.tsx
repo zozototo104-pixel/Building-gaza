@@ -368,6 +368,7 @@ const Login = () => {
 
 const ResetPassword = () => {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [checkingLink, setCheckingLink] = useState(true);
   const [isRecoverySession, setIsRecoverySession] = useState(false);
   const [linkError, setLinkError] = useState('');
