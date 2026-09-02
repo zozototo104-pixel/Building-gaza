@@ -59,6 +59,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [checkingSetup, setCheckingSetup] = useState(true);
 
   useEffect(() => {
