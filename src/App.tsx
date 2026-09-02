@@ -483,7 +483,7 @@ const ResetPassword = () => {
         return;
       }
 
-      await supabase.auth.signOut().catch(() => {});
+      await signOut().catch(() => {});
       toast.success('تم تحديث كلمة المرور بنجاح. يمكنك تسجيل الدخول الآن.');
       navigate('/login', { replace: true });
     } catch (err) {
