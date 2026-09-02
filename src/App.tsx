@@ -329,8 +329,17 @@ const Login = () => {
               </div>
 
               <button
+                type="button"
+                onClick={handlePasswordResetRequest}
+                disabled={loading || recoveryLoading}
+                className="w-full text-center text-xs font-black text-primary hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {recoveryLoading ? 'جاري إرسال رابط الاستعادة...' : 'نسيت كلمة المرور؟'}
+              </button>
+
+              <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || recoveryLoading}
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl shadow-md text-sm font-black text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 transition-all cursor-pointer"
               >
                 <ShieldCheck className="h-4 w-4" />
