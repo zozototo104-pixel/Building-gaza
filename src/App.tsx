@@ -15,6 +15,7 @@ import { RentContracts } from './pages/RentContracts';
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router';
 import { AuthProvider, useAuth } from './lib/auth';
+import { supabase } from './lib/supabase';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
