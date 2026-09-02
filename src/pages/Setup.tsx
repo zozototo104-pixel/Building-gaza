@@ -19,14 +19,15 @@ export default function Setup() {
         const res = await fetch('/api/setup/status');
         const data = await res.json();
         
-        if (!data.setupRequired) {
+        if (data && data.setupRequired === false) {
           navigate('/login', { replace: true });
         } else {
           setLoading(false);
         }
       } catch (err) {
-        console.error(err);
-        toast.error('حدث خطأ أثناء الاتصال بالخادم');
+        console.error('Setup status check error, opening setup page anyway:', err);
+        // If API fails or backend is unreachable, still open setup page for user
+        setLoading(false);
       }
     };
     checkStatus();
