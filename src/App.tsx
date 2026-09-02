@@ -104,6 +104,34 @@ const Login = () => {
     }
   };
 
+  const handlePasswordResetRequest = async () => {
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) {
+      toast.error('يرجى إدخال البريد الإلكتروني أولاً لاستعادة كلمة المرور.');
+      return;
+    }
+
+    setRecoveryLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        console.error('Password recovery request failed:', error.message);
+        toast.error('تعذر إرسال رابط استعادة كلمة المرور الآن. يرجى المحاولة لاحقاً.');
+        return;
+      }
+
+      toast.success('إذا كان البريد مسجلاً لدينا، ستصلك رسالة استعادة كلمة المرور خلال لحظات.');
+    } catch (err) {
+      console.error('Unexpected password recovery request failure:', err);
+      toast.error('تعذر إرسال رابط استعادة كلمة المرور الآن. يرجى المحاولة لاحقاً.');
+    } finally {
+      setRecoveryLoading(false);
+    }
+  };
+
   const handleTenantSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!apartmentNumber.trim()) {
